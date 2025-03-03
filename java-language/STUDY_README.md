@@ -1,7 +1,7 @@
 # Java Collection Framework
 
 ## 미션 1: 기능 요구사항
-- [ ] `SimpleList` 인터페이스의 `ArrayList` 구현체인 `SimpleArrayList`를 구현한다
+- [x] `SimpleList` 인터페이스의 `ArrayList` 구현체인 `SimpleArrayList`를 구현한다
   - 내부적으로 동적으로 배열의 크기를 조절하는 동작을 이해하는 것이 목표다
 
 ## 미션 2: 기능 요구사항
