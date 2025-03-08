@@ -1,17 +1,18 @@
 package cholog.goodcode;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.function.BiFunction;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 /**
  * 좋은 코드의 기준은 사람마다 다르지만 대부분의 사람들이 동의하는 몇 가지 기준이 있습니다.
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
  * 유지보수성과 확장성을 위한 예측 가능한 코드를 작성하는 방법을 알아봅니다.
  */
 public class PredictableCodeTest {
+
     record Car(int position) {
     }
 
@@ -33,6 +35,7 @@ public class PredictableCodeTest {
     void 어떻게_매번_값을_체크하지_않도록_할_수_있을까() {
         // TODO: 매번 -1을 체크하지 않고 참여자가 없다는 것을 명시적으로 표현할 수 있는 코드를 작성해보세요.
         class RacingGame {
+
             private static final int NO_PARTICIPANT = -1;
 
             private final List<Car> participants;
@@ -50,15 +53,20 @@ public class PredictableCodeTest {
                 return (int) participants.stream()
                         .mapToInt(Car::position)
                         .average()
-                        .orElse(NO_PARTICIPANT);
+                        .orElseThrow(() -> new IllegalStateException("position이 존재하지 않습니다."));
             }
+
         }
 
-        final var racingGame = new RacingGame();
+        final var racingGameNoParticipants = new RacingGame();
+        final var racingGame = new RacingGame(List.of(new Car(1), new Car(3)));
 
-        final var averagePosition = racingGame.averagePosition();
+//        assertThat(averagePosition).isEqualTo(RacingGame.NO_PARTICIPANT);
+        assertThatThrownBy(racingGameNoParticipants::averagePosition)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("position이 존재하지 않습니다.");
 
-        assertThat(averagePosition).isEqualTo(RacingGame.NO_PARTICIPANT);
+        assertThat(racingGame.averagePosition()).isEqualTo(2);
     }
 
     /**
@@ -72,6 +80,7 @@ public class PredictableCodeTest {
     void null을_사용하지_않고_의도를_전달하는_방법은_무엇일까() {
         // TODO: null을 사용하지 않고 참여자가 없다는 것을 명시적으로 표현할 수 있는 코드를 작성해보세요.
         class RacingGame {
+
             private final List<Car> participants;
 
             RacingGame() {
@@ -93,6 +102,7 @@ public class PredictableCodeTest {
                 }
                 return (int) average.getAsDouble();
             }
+
         }
 
         final var racingGame = new RacingGame();
@@ -114,6 +124,7 @@ public class PredictableCodeTest {
     void 어떻게_참여자가_없는_상황을_처리하는_코드를_중복하지_않고_처리할_수_있을까() {
         // TODO: 참여자가 없는 상황을 중복하지 않고 처리할 수 있는 코드를 작성해보세요.
         class RacingGame {
+
             private final List<Car> participants;
 
             RacingGame() {
@@ -135,6 +146,7 @@ public class PredictableCodeTest {
                 }
                 return Optional.of((int) average.getAsDouble());
             }
+
         }
 
         final var racingGame = new RacingGame();
@@ -154,6 +166,7 @@ public class PredictableCodeTest {
     @DisplayName("예외를 발생하여 명시적으로 처리하는 방법입니다.")
     void 예외를_발생하여_명시적으로_처리하는_방법입니다() {
         class RacingGame {
+
             private final List<Car> participants;
 
             RacingGame() {
@@ -175,6 +188,7 @@ public class PredictableCodeTest {
                 }
                 return (int) average.getAsDouble();
             }
+
         }
 
         final var racingGame = new RacingGame();
@@ -194,6 +208,7 @@ public class PredictableCodeTest {
     @DisplayName("자동차 이동과 조회를 같이 할 경우 어떠한 문제가 있을지 고민 후 개선한다.")
     void 자동차_이동과_조회를_같이_할_경우_어떠한_문제가_있을지_고민_후_개선한다() {
         class Car {
+
             private int position;
 
             // TODO: 자동차 이동과 조회를 같이 할 경우 어떠한 문제가 있을지 고민 후 개선해보세요.
@@ -204,6 +219,7 @@ public class PredictableCodeTest {
 
                 return ++position;
             }
+
         }
 
         final var car = new Car();
@@ -222,6 +238,7 @@ public class PredictableCodeTest {
     @DisplayName("자동차가 최대 위치에서 움직이지 않고 유지하는 코드는 어떠한 문제가 있을지 고민 후 개선한다.")
     void 자동차가_최대_위치에서_움직이지_않고_유지하는_코드는_어떠한_문제가_있을지_고민_후_개선한다() {
         class Car {
+
             private int position;
 
             Car(final int position) {
@@ -234,7 +251,7 @@ public class PredictableCodeTest {
                     return;
                 }
                 if (position >= 5) {
-                    return;
+                    throw new IllegalStateException("더 이상 움직일 수 없습니다.");
                 }
 
                 position++;
@@ -243,11 +260,14 @@ public class PredictableCodeTest {
             int getPosition() {
                 return position;
             }
+
         }
 
         final var car = new Car(5);
 
-        car.move(5);
+        assertThatThrownBy(() -> car.move(5))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("더 이상 움직일 수 없습니다.");
 
         assertThat(car.getPosition()).isEqualTo(5);
     }
@@ -262,6 +282,7 @@ public class PredictableCodeTest {
     @DisplayName("파워가 4보다 작을 때 무시하는 코드는 어떠한 문제가 있을지 고민 후 개선한다.")
     void 파워가_4보다_작을_때_무시하는_코드는_어떠한_문제가_있을지_고민_후_개선한다() {
         class Car {
+
             private int position;
 
             Car(final int position) {
@@ -270,6 +291,7 @@ public class PredictableCodeTest {
 
             void move(final int power) {
                 // TODO: 파워가 4보다 작을 때 무시하는 코드는 어떠한 문제가 있을지 고민 후 개선해보세요.
+                // power가 4 이하일 때 움직이지 않는 것은 의도한 설계다. 아무런 문제가 없다
                 if (power <= 4) {
                     return;
                 }
@@ -280,14 +302,19 @@ public class PredictableCodeTest {
 
                 position++;
             }
+
         }
 
         final var car = new Car(5);
+        final var startingCar = new Car(0);
 
         assertThatThrownBy(() -> {
             car.move(5);
         }).isInstanceOf(IllegalStateException.class)
                 .hasMessage("더 이상 움직일 수 없습니다.");
+
+        startingCar.move(4);
+        assertThat(startingCar.position).isEqualTo(0);
     }
 
     /**
@@ -298,6 +325,7 @@ public class PredictableCodeTest {
     @DisplayName("문자열로 명령을 받는 것은 어떠한 문제가 있을지 고민 후 개선한다.")
     void 문자열로_명령을_받는_것은_어떠한_문제가_있을지_고민_후_개선한다() {
         class Calculator {
+
             private static final String PLUS = "PLUS";
             private static final String MINUS = "MINUS";
 
@@ -307,15 +335,34 @@ public class PredictableCodeTest {
                     final int left,
                     final int right
             ) {
-                if (PLUS.equals(command)) {
-                    return left + right;
-                }
-                if (MINUS.equals(command)) {
-                    return left - right;
+                return Command.of(command)
+                        .execute(left, right);
+            }
+
+            enum Command {
+                PLUS("PLUS", (left, right) -> left + right),
+                MINUS("MINUS", (left, right) -> left - right);
+
+                private final String text;
+                private final BiFunction<Integer, Integer, Integer> function;
+
+                Command(final String text, final BiFunction<Integer, Integer, Integer> function) {
+                    this.text = text;
+                    this.function = function;
                 }
 
-                throw new UnsupportedOperationException("지원하지 않는 명령입니다.");
+                public static Command of(final String commandText) {
+                    return Arrays.stream(values())
+                            .filter(command -> command.text.equals(commandText))
+                            .findAny()
+                            .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 명령어입니다."));
+                }
+
+                public int execute(final int left, final int right) {
+                    return this.function.apply(left, right);
+                }
             }
+
         }
 
         assertAll(
@@ -341,6 +388,7 @@ public class PredictableCodeTest {
         }
 
         class Calculator {
+
             public static int calculate(
                     final Command command,
                     final int left,
@@ -356,6 +404,7 @@ public class PredictableCodeTest {
 
                 throw new UnsupportedOperationException("지원하지 않는 명령입니다.");
             }
+
         }
 
         // TODO: 새로운 열거형이 추가되었을 때 해당 명령을 처리하는 코드를 놓치지 않을 수 있는 방법을 고민 후 개선해보세요.
@@ -376,26 +425,36 @@ public class PredictableCodeTest {
     @DisplayName("어떻게 더 빠른 시점에 해당 명령을 처리하는 코드를 놓치지 않을 수 있을까?")
     void 어떻게_더_빠른_시점에_해당_명령을_처리하는_코드를_놓치지_않을_수_있을까() {
         enum Command {
-            PLUS,
-            MINUS,
-            MULTIPLY
+            PLUS((left, right) -> left + right),
+            MINUS((left, right) -> left - right),
+            MULTIPLY((left, right) -> left * right);
+
+            private final BiFunction<Integer, Integer, Integer> function;
+
+            Command(final BiFunction<Integer, Integer, Integer> function) {
+                this.function = function;
+            }
+
+            int execute(final int left, final int right) {
+                return this.function.apply(left, right);
+            }
         }
 
         class Calculator {
+
             public static int calculate(
                     final Command command,
                     final int left,
                     final int right
             ) {
-                if (command == Command.PLUS) {
-                    return left + right;
+                if (Arrays.stream(Command.values())
+                        .anyMatch(existCommand -> existCommand == command)
+                ) {
+                    return command.execute(left, right);
                 }
-                if (command == Command.MINUS) {
-                    return left - right;
-                }
-
                 throw new UnsupportedOperationException("지원하지 않는 명령입니다.");
             }
+
         }
 
         // TODO: 더 빠른 시점에 해당 명령을 처리하는 코드를 놓치지 않을 수 있는 방법을 고민 후 개선해보세요.
@@ -423,6 +482,7 @@ public class PredictableCodeTest {
         }
 
         class Calculator {
+
             public static int calculate(
                     final Command command,
                     final int left,
@@ -434,6 +494,7 @@ public class PredictableCodeTest {
                     case MULTIPLY -> left * right; // Note: 모든 열것값을 처리하지 않으면 컴파일 오류가 발생한다.
                 };
             }
+
         }
 
         for (final Command command : Command.values()) {
@@ -470,6 +531,7 @@ public class PredictableCodeTest {
         }
 
         class Calculator {
+
             public static int calculate(
                     final Command command,
                     final int left,
@@ -477,6 +539,7 @@ public class PredictableCodeTest {
             ) {
                 return command.execute(left, right);
             }
+
         }
 
         for (final Command command : Command.values()) {
@@ -485,4 +548,5 @@ public class PredictableCodeTest {
             }).doesNotThrowAnyException();
         }
     }
+
 }
