@@ -1,21 +1,23 @@
 package cholog.goodcode;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import static java.util.Collections.unmodifiableList;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.IntStream;
 
-import static java.util.Collections.unmodifiableList;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 /**
  * 좋은 코드의 기준은 사람마다 다르지만 대부분의 사람들이 동의하는 몇 가지 기준이 있습니다.
@@ -24,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * 유지보수성과 확장성을 위한 실수를 방지하는 코드를 작성하는 방법을 알아봅니다.
  */
 public class AvoidMistakeCodeTest {
+
     /**
      * 아래 코드는 최대 5까지만 움직이는 자동차를 구현한 코드입니다.
      * 자동차와 위치를 포장하여 응집도를 높이고 유지보수성 및 확장성을 고려한 코드입니다.
@@ -35,7 +38,9 @@ public class AvoidMistakeCodeTest {
     void 어떻게_같은_위치_객체를_사용할_때_발생할_수_있는_실수를_방지할_수_있을까() {
         // TODO: 같은 위치 객체를 사용할 때 발생할 수 있는 실수를 방지할 수 있는 방법을 고민 후 개선해보세요.
         class Position {
-            private int value;
+
+            private static final int MOVE_FORWARD_SIZE = 1;
+            private final int value;
 
             Position() {
                 this(0);
@@ -45,14 +50,18 @@ public class AvoidMistakeCodeTest {
                 this.value = value;
             }
 
-            public void increase() {
-                value++;
+            public Position increase() {
+                return new Position(value + MOVE_FORWARD_SIZE);
             }
 
             @Override
             public boolean equals(final Object o) {
-                if (this == o) return true;
-                if (o == null || getClass() != o.getClass()) return false;
+                if (this == o) {
+                    return true;
+                }
+                if (o == null || getClass() != o.getClass()) {
+                    return false;
+                }
                 final Position position = (Position) o;
                 return value == position.value;
             }
@@ -61,23 +70,26 @@ public class AvoidMistakeCodeTest {
             public int hashCode() {
                 return Objects.hash(value);
             }
+
         }
 
         record Car(
                 String name,
                 Position position
         ) {
-            public void forward() {
-                position.increase();
+
+            public Car forward() {
+                return new Car(name, position.increase());
             }
+
         }
 
         final var position = new Position();
 
-        final var neoCar = new Car("네오", position);
+        var neoCar = new Car("네오", position);
         final var brownCar = new Car("브라운", position);
 
-        neoCar.forward();
+        neoCar = neoCar.forward();
 
         // Note: 네오의 자동차만 움직였기 때문에 브라운의 자동차는 움직이지 않아야 한다.
         assertThat(neoCar.position()).isEqualTo(new Position(1));
@@ -97,34 +109,53 @@ public class AvoidMistakeCodeTest {
     void 불변_객체를_사용할_때_성능상의_이슈를_해결하는_방법은_무엇일까() {
         // TODO: 불변 객체를 사용할 때 성능상의 이슈를 해결하는 방법을 고민 후 개선해보세요.
         record Position(int value) {
-            Position() {
-                this(0);
+
+            private static final Map<Integer, Position> CACHE = new HashMap<>();
+
+            public static Position startingPoint() {
+                return valueOf(0);
+            }
+
+            public static Position valueOf(final int value) {
+                return CACHE.computeIfAbsent(value, Position::new);
             }
 
             public Position increase() {
-                return new Position(value + 1);
+                return valueOf(value + 1);
             }
+
         }
 
         record Car(
                 String name,
                 Position position
         ) {
-            public Car forward() {
-                return new Car(name, position.increase());
+
+            private static final Map<String, Car> CACHE = new HashMap<>();
+
+            public static Car of(final String name, final Position position) {
+                return CACHE.computeIfAbsent(toKey(name, position), key -> new Car(key, position));
             }
+
+            private static String toKey(final String name, final Position position) {
+                return name + position.value();
+            }
+
+            public Car forward() {
+                // Note: 움직일 때 마다 캐싱된 객체가 재활용된다. 하지만 캐싱된 객체가 많을수록 메모리 사용량이 증가한다.
+                return Car.of(name, position.increase());
+            }
+
         }
 
-        final var position = new Position();
-
-        var neoCar = new Car("네오", position);
-        final var brownCar = new Car("브라운", position);
+        var neoCar = Car.of("네오", Position.startingPoint());
+        final var brownCar = new Car("브라운", Position.startingPoint());
 
         // Note: Car 객체가 불변 객체가 되면서 위치가 이동될 때 마다 새로운 객체가 생성된다.
         neoCar = neoCar.forward();
 
-        assertThat(neoCar.position()).isEqualTo(new Position(1));
-        assertThat(brownCar.position()).isEqualTo(new Position(0));
+        assertThat(neoCar.position()).isEqualTo(Position.valueOf(1));
+        assertThat(brownCar.position()).isEqualTo(Position.startingPoint());
     }
 
     /**
@@ -138,6 +169,8 @@ public class AvoidMistakeCodeTest {
     void 메모리_사용량을_최소화하는_방법은_무엇일까() {
         // TODO: 메모리 사용량을 최소화하는 방법을 고민 후 개선해보세요.
         record Position(int value) {
+
+            // 모든 테스트를 함께 돌릴 때 문제를 방지하기 위해 ConcurrentHashMap 사용?
             private static final Map<Integer, Position> CACHE = new ConcurrentHashMap<>();
 
             public static Position startingPoint() {
@@ -151,12 +184,14 @@ public class AvoidMistakeCodeTest {
             public Position increase() {
                 return valueOf(value + 1);
             }
+
         }
 
         record Car(
                 String name,
                 Position position
         ) {
+
             private static final Map<String, Car> CACHE = new ConcurrentHashMap<>();
 
             public static Car of(final String name, final Position position) {
@@ -171,6 +206,7 @@ public class AvoidMistakeCodeTest {
                 // Note: 움직일 때 마다 캐싱된 객체가 재활용된다. 하지만 캐싱된 객체가 많을수록 메모리 사용량이 증가한다.
                 return Car.of(name, position.increase());
             }
+
         }
 
         final var position = Position.startingPoint();
@@ -196,6 +232,7 @@ public class AvoidMistakeCodeTest {
     void 객체_그래프가_깊을_때_문제를_해결하는_방법은_무엇일까() {
         // TODO: 객체 그래프가 깊을 때 문제를 해결하는 방법을 고민 후 개선해보세요.
         record PositionForEnhancedCache(int value) {
+
             private static final int CACHE_MIN = 0;
             private static final int CACHE_MAX = 5;
             private static final Map<Integer, PositionForEnhancedCache> CACHE = IntStream.range(CACHE_MIN, CACHE_MAX)
@@ -217,12 +254,14 @@ public class AvoidMistakeCodeTest {
             public PositionForEnhancedCache increase() {
                 return valueOf(value + 1);
             }
+
         }
 
         record CarForEnhancedCache(
                 String name,
                 PositionForEnhancedCache position
         ) {
+
             private static final Map<String, CarForEnhancedCache> CACHE = new ConcurrentHashMap<>();
 
             public static CarForEnhancedCache of(final String name, final PositionForEnhancedCache position) {
@@ -236,6 +275,7 @@ public class AvoidMistakeCodeTest {
             public CarForEnhancedCache forward() {
                 return CarForEnhancedCache.of(name, position.increase());
             }
+
         }
 
         final var position = PositionForEnhancedCache.startingPoint();
@@ -261,6 +301,7 @@ public class AvoidMistakeCodeTest {
     @DisplayName("적정한 시점까지만 불변 객체를 사용한다.")
     void 적정한_시점까지만_불변_객체를_사용한다() {
         record Position(int value) {
+
             Position() {
                 this(0);
             }
@@ -268,11 +309,13 @@ public class AvoidMistakeCodeTest {
             public Position increase() {
                 return new Position(value + 1);
             }
+
         }
 
         class Car {
+
             private final String name;
-            private Position position;
+            private Position position; // 불변 객체를 가변 객체로 사용
 
             Car(final String name, final Position position) {
                 this.name = name;
@@ -286,6 +329,7 @@ public class AvoidMistakeCodeTest {
             public Position getPosition() {
                 return position;
             }
+
         }
 
         final var position = new Position();
@@ -310,6 +354,7 @@ public class AvoidMistakeCodeTest {
     void 객체의_상태를_변경할_수_있는_위험을_방지하는_방법은_무엇일까() {
         // TODO: 객체의 상태를 변경할 수 있는 위험을 방지하는 방법을 고민 후 개선해보세요.
         record Position(int value) {
+
             Position() {
                 this(0);
             }
@@ -317,9 +362,11 @@ public class AvoidMistakeCodeTest {
             public Position increase() {
                 return new Position(value + 1);
             }
+
         }
 
         class Car {
+
             private final String name;
             private Position position;
 
@@ -336,6 +383,10 @@ public class AvoidMistakeCodeTest {
                 return this.position.equals(position);
             }
 
+            public String getName() {
+                return name;
+            }
+
             public Position getPosition() {
                 return position;
             }
@@ -347,13 +398,15 @@ public class AvoidMistakeCodeTest {
                         ", position=" + position +
                         '}';
             }
+
         }
 
         class RacingGame {
+
             private final List<Car> participants;
 
             RacingGame(final List<Car> participants) {
-                this.participants = participants;
+                this.participants = new ArrayList<>(participants);
             }
 
             public List<Car> selectWinners() {
@@ -374,8 +427,9 @@ public class AvoidMistakeCodeTest {
             }
 
             List<Car> getParticipants() {
-                return participants;
+                return Collections.unmodifiableList(participants);
             }
+
         }
 
         final var neoCar = new Car("네오", new Position());
@@ -387,8 +441,11 @@ public class AvoidMistakeCodeTest {
         assertThat(winners).containsExactly(brownCar);
 
         // Note: 외부에서 조작할 수 있는 위험이 존재하고 있다.
-        participants.add(new Car("브리", new Position(2)));
-        racingGame.getParticipants().add(new Car("솔라", new Position(3)));
+        Car brieCar = new Car("브리", new Position(2));
+        participants.add(brieCar);
+        assertThat(participants).containsExactlyElementsOf(List.of(neoCar, brownCar, brieCar));
+        assertThatThrownBy(() -> racingGame.getParticipants().add(new Car("솔라", new Position(3))))
+                .isInstanceOf(UnsupportedOperationException.class);
         assertThat(winners).containsExactly(brownCar);
         assertThat(racingGame.getParticipants()).containsExactlyElementsOf(List.of(neoCar, brownCar));
     }
@@ -404,6 +461,7 @@ public class AvoidMistakeCodeTest {
     void 방어적_복사를_사용할_때_성능상의_이슈를_해결하는_방법은_무엇일까() {
         // TODO: 방어적 복사를 사용할 때 성능상의 이슈를 해결하는 방법을 고민 후 개선해보세요.
         record Position(int value) {
+
             Position() {
                 this(0);
             }
@@ -411,9 +469,11 @@ public class AvoidMistakeCodeTest {
             public Position increase() {
                 return new Position(value + 1);
             }
+
         }
 
         class Car {
+
             private final String name;
             private Position position;
 
@@ -441,9 +501,11 @@ public class AvoidMistakeCodeTest {
                         ", position=" + position +
                         '}';
             }
+
         }
 
         class RacingGame {
+
             private final List<Car> participants;
 
             RacingGame(final List<Car> participants) {
@@ -471,6 +533,7 @@ public class AvoidMistakeCodeTest {
                 // Note: 매번 새로운 리스트를 생성하여 성능상의 이슈가 발생할 수 있다.
                 return new ArrayList<>(participants);
             }
+
         }
 
         final var neoCar = new Car("네오", new Position());
@@ -497,6 +560,7 @@ public class AvoidMistakeCodeTest {
     @DisplayName("입력을 받는 컬렉션은 방어적 복사로, 응답하는 컬렉션은 불변 컬렉션으로 만드는 것이 좋다.")
     void 입력을_받는_컬렉션은_방어적_복사로_응답하는_컬렉션은_불변_컬렉션으로_만드는_것이_좋다() {
         record Position(int value) {
+
             Position() {
                 this(0);
             }
@@ -504,9 +568,11 @@ public class AvoidMistakeCodeTest {
             public Position increase() {
                 return new Position(value + 1);
             }
+
         }
 
         class Car {
+
             private final String name;
             private Position position;
 
@@ -534,12 +600,15 @@ public class AvoidMistakeCodeTest {
                         ", position=" + position +
                         '}';
             }
+
         }
 
         class RacingGame {
+
             private final List<Car> participants;
 
             RacingGame(final List<Car> participants) {
+                // 방어적 복사
                 this.participants = new ArrayList<>(participants);
             }
 
@@ -561,8 +630,10 @@ public class AvoidMistakeCodeTest {
             }
 
             List<Car> getParticipants() {
+                // 불변 컬렉션으로 반환 -> add, remove 등 수정을 가하는 작업을 호출하면 예외 발생
                 return unmodifiableList(participants);
             }
+
         }
 
         final var neoCar = new Car("네오", new Position());
@@ -582,4 +653,5 @@ public class AvoidMistakeCodeTest {
             racingGame.getParticipants().add(new Car("솔라", new Position(3)));
         }).isInstanceOf(UnsupportedOperationException.class);
     }
+
 }
