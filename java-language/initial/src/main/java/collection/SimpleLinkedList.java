@@ -1,8 +1,8 @@
 package collection;
 
-public class SimpleLinkedList implements SimpleList {
+public class SimpleLinkedList<T> implements SimpleList<T> {
 
-    private Node head;
+    private Node<T> head;
     private int size;
 
     public SimpleLinkedList() {
@@ -11,33 +11,41 @@ public class SimpleLinkedList implements SimpleList {
     }
 
     @Override
-    public boolean add(final String value) {
+    public boolean add(final T value) {
         if (this.size == 0) {
-            head = new Node(value);
+            head = new Node<>(value);
             size++;
+            return true;
         }
+        int currentIndex = 0;
+        Node<T> prev = head;
+        while (++currentIndex < size) {
+            prev = prev.next;
+        }
+        prev.next = new Node<>(value);
+        size++;
         return true;
     }
 
     @Override
-    public void add(final int index, final String value) {
-        Node beforeNode = head;
-        Node originNode = null;
+    public void add(final int index, final T value) {
+        Node<T> beforeNode = head;
+        Node<T> originNode = null;
         for (int i = 0; i < index - 1; i++) {
             beforeNode = beforeNode.next;
             originNode = beforeNode.next;
         }
-        Node newNode = new Node(value);
+        Node<T> newNode = new Node<>(value);
         beforeNode.next = newNode;
         newNode.next = originNode;
     }
 
     @Override
-    public String set(final int index, final String value) {
+    public T set(final int index, final T value) {
         int currentIndex = 0;
-        Node targetNode = head;
+        Node<T> targetNode = head;
         while (currentIndex < size) {
-            targetNode = head.next;
+            targetNode = targetNode.next;
             currentIndex++;
         }
         targetNode.value = value;
@@ -45,19 +53,19 @@ public class SimpleLinkedList implements SimpleList {
     }
 
     @Override
-    public String get(final int index) {
+    public T get(final int index) {
         int currentIndex = 0;
-        Node targetNode = head;
-        while (currentIndex < size) {
-            targetNode = head.next;
+        Node<T> targetNode = head;
+        while (currentIndex < index) {
+            targetNode = targetNode.next;
             currentIndex++;
         }
         return targetNode.value;
     }
 
     @Override
-    public boolean contains(final String value) {
-        Node iter = head;
+    public boolean contains(final T value) {
+        Node<T> iter = head;
         while (iter.next != null) {
             if (iter.value.equals(value)) {
                 return true;
@@ -67,8 +75,8 @@ public class SimpleLinkedList implements SimpleList {
     }
 
     @Override
-    public int indexOf(final String value) {
-        Node iter = head;
+    public int indexOf(final T value) {
+        Node<T> iter = head;
         int currentIndex = 0;
         while (iter.next != null) {
             if (iter.value.equals(value)) {
@@ -90,9 +98,9 @@ public class SimpleLinkedList implements SimpleList {
     }
 
     @Override
-    public boolean remove(final String value) {
-        Node iterBefore = null;
-        Node iter = head;
+    public boolean remove(final T value) {
+        Node<T> iterBefore = null;
+        Node<T> iter = head;
         while (iter != null) {
             if (iter.value.equals(value)) {
                 if (iter == head) {
@@ -108,21 +116,21 @@ public class SimpleLinkedList implements SimpleList {
     }
 
     @Override
-    public String remove(final int index) {
+    public T remove(final int index) {
         int currentIndex = 0;
-        Node prevTargetNode = null;
-        Node targetNode = head;
+        Node<T> prevTargetNode = null;
+        Node<T> targetNode = head;
         while (currentIndex < size) {
             prevTargetNode = targetNode;
             targetNode = targetNode.next;
             currentIndex++;
         }
         if (prevTargetNode == null) {
-            String removedValue = head.value;
+            T removedValue = head.value;
             head = targetNode.next;
             return removedValue;
         }
-        String removedValue = targetNode.value;
+        T removedValue = targetNode.value;
         prevTargetNode.next = targetNode.next;
         targetNode = null;
         return removedValue;
@@ -133,12 +141,12 @@ public class SimpleLinkedList implements SimpleList {
         head = null;
     }
 
-    private static class Node {
+    private static class Node<T> {
 
-        private String value;
-        private Node next;
+        private T value;
+        private Node<T> next;
 
-        public Node(final String value) {
+        public Node(final T value) {
             this.value = value;
             this.next = null;
         }

@@ -3,16 +3,16 @@ package collection;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
-public class SimpleArrayList implements SimpleList {
+public class SimpleArrayList<T> implements SimpleList<T> {
 
     private static final int DEFAULT_SIZE = 10;
     private static final int MIN_SIZE = 0;
 
-    private String[] array;
+    private T[] array;
     private int size;
 
     public SimpleArrayList() {
-        this.array = new String[DEFAULT_SIZE];
+        this.array = (T[]) (new Object[DEFAULT_SIZE]);
         this.size = 0;
     }
 
@@ -20,12 +20,12 @@ public class SimpleArrayList implements SimpleList {
         if (initialSize < MIN_SIZE) {
             throw new IllegalArgumentException("%d 보다 작은 크기의 리스트를 생성할 수 없습니다.".formatted(MIN_SIZE));
         }
-        this.array = new String[initialSize];
+        this.array = (T[]) new Object[initialSize];
         this.size = 0;
     }
 
     @Override
-    public boolean add(final String value) {
+    public boolean add(final T value) {
         if (isEmpty()) {
             this.array = Arrays.copyOf(array, 2);
             array[size++] = value;
@@ -41,7 +41,7 @@ public class SimpleArrayList implements SimpleList {
     }
 
     @Override
-    public void add(final int index, final String value) {
+    public void add(final int index, final T value) {
         if (size >= array.length) {
             this.array = grow();
         }
@@ -50,28 +50,28 @@ public class SimpleArrayList implements SimpleList {
         size++;
     }
 
-    private String[] grow() {
+    private T[] grow() {
         return Arrays.copyOf(array, size * 2);
     }
 
     @Override
-    public String set(final int index, final String value) {
+    public T set(final int index, final T value) {
         return array[index] = value;
     }
 
     @Override
-    public String get(final int index) {
+    public T get(final int index) {
         return array[index];
     }
 
     @Override
-    public boolean contains(final String value) {
+    public boolean contains(final T value) {
         return IntStream.range(0, size)
                 .anyMatch(index -> array[index].equals(value));
     }
 
     @Override
-    public int indexOf(final String value) {
+    public int indexOf(final T value) {
         for (int index = 0; index < size; index++) {
             if (array[index].equals(value)) {
                 return index;
@@ -91,15 +91,15 @@ public class SimpleArrayList implements SimpleList {
     }
 
     @Override
-    public boolean remove(final String value) {
+    public boolean remove(final T value) {
         int removedIndex = indexOf(value);
         remove(removedIndex);
         return true;
     }
 
     @Override
-    public String remove(final int index) {
-        String removedValue = array[index];
+    public T remove(final int index) {
+        T removedValue = array[index];
         System.arraycopy(array, index + 1, array, index, size - 1);
         this.size--;
         return removedValue;

@@ -12,8 +12,8 @@
 # 제네릭 학습하기
 
 ## 미션 1: 기능 요구사항
-- [ ] 제네릭 클래스에 대해 학습한다
-- [ ] 제네릭을 사용하여 `SimpleList`에서 String 이외의 타입도 다룰 수 있도록 개선한다
+- [x] 제네릭 클래스에 대해 학습한다
+- [x] 제네릭을 사용하여 `SimpleList`에서 String 이외의 타입도 다룰 수 있도록 개선한다
 ```java
 SimpleList<Integer> values = new SimpleArrayList<Integer>();
 values.add(1);
